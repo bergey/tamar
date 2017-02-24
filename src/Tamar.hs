@@ -36,6 +36,7 @@ instance Monoid Length where
 -- * Inf* should be non-negative.
 data Rubber = Finite Length | Inf1 Float | Inf2 Float | Inf3 Float
   deriving (Eq, Ord, Read, Show, Data, Typeable, Generic)
+-- TODO test if the Ord instance does the right thing
 
 instance Semigroup Rubber where
   Inf3 a <> Inf3 b = Inf3 (a + b)
@@ -82,8 +83,44 @@ data Size a = Size {
   bottom : a
   }
 
-data Widget t b e = {
-  render :: Render m => Size -> b -> m ();
+emptySize :: Monoid m => Size m
+emptySize = Size mempty mempty mempty mempty
+
+data Reflex t => Widget t b e = {
+  render :: Render m => b -> V2 Float -> m ();
   event :: Event t e
   size : Size Elastic
 }
+
+instance Profunctor (Widget t) where
+  lmap f widget = widget {render = render widg . f }
+  rmap f widget = widget { event = fmap f (event widget) }
+
+data Dir = LTR | RTL | TTB | BTT
+
+maxElastic :: [Elastic] -> Elastic
+maxElastic es = Elastic {
+  min = maximum $ fmap min es
+  elastic = maximum $ fmap elastic es
+  }
+
+sumSizesLTR :: [Size] -> Size
+sumSizesLTR [] = emptySize
+sumSizesLTR szs@(h:t) = Size {
+  left = left h
+  right = right h <> mconcat (fmap left t) <> mconcat (fmap right t)
+  top = maxElastic $ fmap top szs
+  bottom = maxElastic $ fmap bottom szs
+  }
+
+assignSize :: Rect ->
+
+hbox :: [Widget t b e] -> Widget t b e
+hbox ws = Widget {
+  render = r
+  event = e
+  size = sz
+  } where
+  r b rect = sequence_ [ render w b s | w <- ws | s <- childSizes ] where
+      assignSize s =
+  sz = sumSizes $ fmap size ws
