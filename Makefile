@@ -1,14 +1,17 @@
-OUTPUT = tamarind
+OUTPUT = tamar
 
 # run: build
 # 	./release/bin/$(OUTPUT)
 
+default.nix: $(OUTPUT).cabal
+	cabal2nix . > build/default.nix
+
 build:
-	nix-build release0.nix
+	nix-build build/release.nix
 
 .PHONY: install
-install:
-	nix-env -i release0.nix
+install: default.nix
+	nix-env -i build/release.nix
 
 .PHONY : clean
 clean:
@@ -16,5 +19,5 @@ clean:
 # rm -r .cabal-sandbox
 
 .PHONY : shell
-shell:
-	nix-shell -A env release0.nix
+shell: default.nix
+	nix-shell -A $(OUTPUT).env build/release.nix
