@@ -3,16 +3,22 @@ OUTPUT = tamar
 # run: build
 # 	./release/bin/$(OUTPUT)
 
-.cabal-sandbox:
-	cabal sandbox init
+build/default.nix: $(OUTPUT).cabal
+	cabal2nix . > build/default.nix
 
-build: .cabal-sandbox
-	nix-shell --command 'cabal install'
+build:
+	nix-build build/release.nix
+
+.PHONY: install
+install: build/default.nix
+	nix-env -i build/release.nix
 
 .PHONY : clean
 clean:
-	rm -r .cabal-sandbox
+	rm -f release
+	rm build/default.nix
+# rm -r .cabal-sandbox
 
 .PHONY : shell
-shell: .cabal-sandbox
-	nix-shell
+shell: build/default.nix
+	nix-shell -A $(OUTPUT).env build/release.nix
