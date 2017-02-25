@@ -8,10 +8,13 @@
 
 module Tamar where
 
+import Data.Data
+import GHC.Generics
+import Data.Typeable
 import Data.Profunctor
 import Reflex
 import Linear
-import Data.Monoid hiding (<>)
+import Data.Monoid hiding ((<>))
 import Data.Semigroup
 
 -- * These are expected to be positive.
@@ -55,21 +58,21 @@ instance Monoid Rubber where
   mempty = Finite mempty
 
 data Elastic = Elastic {
-  min :: Length
+  minLength :: Length,
   elastic :: Elastic
   }
   deriving (Eq, Ord, Read, Show, Data, Typeable, Generic)
 
 instance Semigroup Elastic where
   a <> b = Elastic {
-    min = min a <> min b
+    minLength = minLength a <> minLength b,
     elastic = elastic a <> elastic b
     }
 
 instance Monoid Elastic where
   mappend = (<>)
   mempty = Elastic {
-    min = mempty
+    minLength = mempty,
     elastic = mempty
     }
 
@@ -77,50 +80,53 @@ instance Monoid Elastic where
 -- * 'Widget' has an origin and a size, used in layout, so we track
 -- * size in four directions from the origin.
 data Size a = Size {
-  right : a
-  left : a
-  top : a
-  bottom : a
+  right :: a,
+  left :: a,
+  top :: a,
+  bottom :: a
   }
+
+class Render (m :: * -> *)
+-- TODO implement Render
 
 emptySize :: Monoid m => Size m
 emptySize = Size mempty mempty mempty mempty
 
-data Reflex t => Widget t b e = {
-  render :: Render m => b -> V2 Float -> m ();
-  event :: Event t e
-  size : Size Elastic
+data Widget t b e = Widget {
+  render :: forall m. Render m => b -> V2 Float -> m (),
+  event :: Event t e,
+  size :: Size Elastic
 }
 
-instance Profunctor (Widget t) where
-  lmap f widget = widget {render = render widg . f }
+instance Reflex t => Profunctor (Widget t) where
+  lmap f widget = widget {render = render widget . f }
   rmap f widget = widget { event = fmap f (event widget) }
 
 data Dir = LTR | RTL | TTB | BTT
 
 maxElastic :: [Elastic] -> Elastic
 maxElastic es = Elastic {
-  min = maximum $ fmap min es
+  minLength = maximum $ fmap minLength es,
   elastic = maximum $ fmap elastic es
   }
 
-sumSizesLTR :: [Size] -> Size
+sumSizesLTR :: [Size Elastic] -> Size Elastic
 sumSizesLTR [] = emptySize
 sumSizesLTR szs@(h:t) = Size {
-  left = left h
-  right = right h <> mconcat (fmap left t) <> mconcat (fmap right t)
-  top = maxElastic $ fmap top szs
+  left = left h,
+  right = right h <> mconcat (fmap left t) <> mconcat (fmap right t),
+  top = maxElastic $ fmap top szs,
   bottom = maxElastic $ fmap bottom szs
   }
 
-assignSize :: Rect ->
+-- assignSize :: Rect ->
 
-hbox :: [Widget t b e] -> Widget t b e
-hbox ws = Widget {
-  render = r
-  event = e
-  size = sz
-  } where
-  r b rect = sequence_ [ render w b s | w <- ws | s <- childSizes ] where
-      assignSize s =
-  sz = sumSizes $ fmap size ws
+-- hbox :: [Widget t b e] -> Widget t b e
+-- hbox ws = Widget {
+--   render = r,
+--   event = e,
+--   size = sz
+--   } where
+--   r b rect = sequence_ [ render w b s | w <- ws | s <- childSizes ] where
+--       assignSize s = s
+--   sz = sumSizes $ fmap size ws

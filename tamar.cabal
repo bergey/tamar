@@ -21,7 +21,7 @@ library
         Tamar
   -- other-modules:       
   -- other-extensions:    
-  build-depends:       base >=4.9 && <4.10,
+  build-depends:       base >=4.7 && <4.10,
                        reflex,
                        linear,
                        profunctors,
