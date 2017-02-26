@@ -12,14 +12,22 @@ let
   config = {
       packageOverrides = pkgs: rec {
           haskellPackages = pkgs.haskellPackages.override {
-              overrides = haskellPackagesNew: haskellPackagesOld: rec {
-                  haskell-src-exts = haskellPackagesNew.callPackage ./upstream/haskell-src-exts.nix { };
-                  haskell-src-meta = haskellPackagesNew.callPackage ./upstream/haskell-src-meta.nix { };
-                  hlint = haskellPackagesNew.callPackage ./upstream/hlint.nix { };
-                  reflex = haskellPackagesNew.callPackage ../../reflex/default.nix { };
-                  tamar = haskellPackagesNew.callPackage ./default.nix { };
+              overrides = haskellPackagesNew: haskellPackagesOld:
+                let callPackage = haskellPackagesNew.callPackage; in rec {
+                  haskell-src-exts = callPackage ./upstream/haskell-src-exts.nix { };
+                  haskell-src-meta = callPackage ./upstream/haskell-src-meta.nix { };
+                  hlint = callPackage ./upstream/hlint.nix { };
+                  reflex = let
+                      json = builtins.fromJSON (builtins.readFile ./upstream/reflex.json);
+                      src = bootstrap.fetchFromGitHub {
+                          owner = "reflex-frp";
+                          repo = "reflex";
+                          inherit (json) rev sha256;
+                      };
+                      in callPackage src { };
+                  tamar = callPackage ./default.nix { };
     
-                  # reflex = haskellPackagesNew.callPackage ./upstream/reflex.nix { };
+                  # reflex = callPackage ./upstream/reflex.nix { };
               };
           };
       };
